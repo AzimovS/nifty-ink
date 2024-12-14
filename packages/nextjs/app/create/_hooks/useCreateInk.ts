@@ -1,12 +1,27 @@
 import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { createCreatorClient, makeMediaTokenMetadata } from "@zoralabs/protocol-sdk";
 import { message } from "antd";
 import * as Hash from "ipfs-only-hash";
 import LZ from "lz-string";
+import { useChainId, usePublicClient, useWriteContract } from "wagmi";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { checkAddressAndFund } from "~~/utils/checkAddressAndFund";
 import { addToIPFS } from "~~/utils/ipfs";
 import { notification } from "~~/utils/scaffold-eth";
+
+// Helper function: Convert Data URL to File
+const dataURLToFile = (dataURL: string, filename: string): File => {
+  const [header, base64] = dataURL.split(",");
+  const mime = header.match(/:(.*?);/)?.[1] || "image/png";
+  const binary = atob(base64);
+  const u8arr = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    u8arr[i] = binary.charCodeAt(i);
+  }
+
+  return new File([u8arr], filename, { type: mime });
+};
 
 export const useCreateInk = (
   drawingCanvas: any,
@@ -16,7 +31,64 @@ export const useCreateInk = (
   handleChangeDrawing: (newDrawing: string) => void,
 ) => {
   const [sending, setSending] = useState<boolean>(false);
+  const publicClient = usePublicClient()!;
+  const chainId = useChainId();
+
   const { writeContractAsync: writeYourContractAsync } = useScaffoldWriteContract("NiftyInk");
+
+  const handleFileUpload = async (file: File) => {
+    // setLoading(true);
+    // setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/pinFile", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to upload the file");
+      }
+
+      const { IpfsHash } = await res.json();
+      return IpfsHash;
+    } catch (error) {
+      console.log(error);
+      // setError(error.message);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  const handleJsonUpload = async (json: object) => {
+    try {
+      const res = await fetch("/api/pinJsonWithPinata", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(json),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to upload the JSON data");
+      }
+
+      const { ipfsUrl } = await res.json();
+      return ipfsUrl;
+    } catch (error) {
+      console.log(error);
+      // setError(error.message);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  const creatorClient = createCreatorClient({ chainId, publicClient });
+  const { writeContract } = useWriteContract();
 
   const createInk = useCallback(
     async (values: any) => {
@@ -33,12 +105,48 @@ export const useCreateInk = (
 
       saveDrawing(drawingCanvas.current, true);
 
-      //let decompressed = LZ.decompress(props.drawing)
-      //let compressedArray = LZ.compressToUint8Array(decompressed)
       const compressedArray = LZ.compressToUint8Array(drawingCanvas?.current?.getSaveData());
 
       const drawingBuffer = Buffer.from(compressedArray);
       const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
+
+      if (chainId === 84532) {
+        const file = dataURLToFile(imageData, "drawing.png");
+        const fileResult = await handleFileUpload(file);
+
+        const drawingBlob = new Blob([drawingBuffer], { type: "application/octet-stream" });
+        const drawingFile = new File([drawingBlob], "drawing.lz", { type: "application/octet-stream" });
+
+        const drawingResult = await handleFileUpload(drawingFile);
+
+        const metadataJson = makeMediaTokenMetadata({
+          mediaUrl: drawingResult,
+          thumbnailUrl: drawingResult,
+          name: "HI Pinata",
+          description: "HI Pinata",
+        });
+
+        const jsonMetadataUri = await handleJsonUpload(metadataJson);
+
+        // const { IpfsHash } = await pinFileWithPinata(file);
+
+        const { parameters, contractAddress } = await creatorClient.create1155({
+          contract: {
+            name: "Nifty Ink",
+            uri: jsonMetadataUri,
+          },
+          token: {
+            tokenMetadataURI: jsonMetadataUri,
+          },
+          // account to execute the transaction (the creator)
+          account: connectedAddress!,
+        });
+        alert(contractAddress);
+
+        writeContract(parameters);
+        setSending(false);
+        return;
+      }
 
       const drawingHash = await Hash.of(drawingBuffer);
       console.log("drawingHash", drawingHash);

@@ -1,16 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import LZ from "lz-string";
-import type { NextPage } from "next";
 import CanvasDraw from "react-canvas-draw";
 
-const NiftyView: NextPage = () => {
+const NiftyView = ({ params }: { params: { cid: string } }) => {
+  const cid = params?.cid;
+
   const drawingCanvas = useRef<CanvasDraw>(null);
   const [drawingData, setDrawingData] = useState<string>("");
 
   const fetchAndShowDrawing = async () => {
-    const url = `${process.env.NEXT_PUBLIC_IPFS_LINK}/QmPsHdFo64etaVtgfAtSefC4fmzRquB5ERXQ6R1cHYULS7`;
+    const url = `${process.env.NEXT_PUBLIC_IPFS_LINK}/${cid}`;
     try {
       console.log(`fetching from IPFS ${new Date().toISOString()}`);
       const response = await fetch(url);
@@ -34,7 +35,9 @@ const NiftyView: NextPage = () => {
     }
   };
 
-  fetchAndShowDrawing();
+  useEffect(() => {
+    fetchAndShowDrawing();
+  }, []);
 
   return (
     <>

@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import LZ from "lz-string";
 import CanvasDraw from "react-canvas-draw";
+import { CanvasDrawLines } from "../../../types/canvasDrawing";
+
 
 const NiftyView = ({ params }: { params: { cid: string } }) => {
   const cid = params?.cid;
 
-  const drawingCanvas = useRef<CanvasDraw>(null);
+  const drawingCanvas = useRef<CanvasDrawLines>(null);
   const [drawingData, setDrawingData] = useState<string>("");
 
   const fetchAndShowDrawing = async () => {

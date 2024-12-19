@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { createCreatorClient, makeMediaTokenMetadata } from "@zoralabs/protocol-sdk";
+import { createCreatorClient } from "@zoralabs/protocol-sdk";
 import { message } from "antd";
 import * as Hash from "ipfs-only-hash";
 import LZ from "lz-string";
@@ -65,7 +65,7 @@ export const useCreateInk = (
 
   const handleJsonUpload = async (json: object) => {
     try {
-      const res = await fetch("/api/pinJsonWithPinata", {
+      const res = await fetch("/api/pinJson", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -77,8 +77,8 @@ export const useCreateInk = (
         throw new Error("Failed to upload the JSON data");
       }
 
-      const { ipfsUrl } = await res.json();
-      return ipfsUrl;
+      const { IpfsHash } = await res.json();
+      return IpfsHash as string;
     } catch (error) {
       console.log(error);
       // setError(error.message);
@@ -111,20 +111,25 @@ export const useCreateInk = (
       const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
 
       if (chainId === 84532) {
-        const file = dataURLToFile(imageData, "drawing.png");
-        const fileResult = await handleFileUpload(file);
+        const imageFile = dataURLToFile(imageData, "drawing.png");
+        const imageResult = await handleFileUpload(imageFile);
 
         const drawingBlob = new Blob([drawingBuffer], { type: "application/octet-stream" });
         const drawingFile = new File([drawingBlob], "drawing.lz", { type: "application/octet-stream" });
 
         const drawingResult = await handleFileUpload(drawingFile);
 
-        const metadataJson = makeMediaTokenMetadata({
-          mediaUrl: drawingResult,
-          thumbnailUrl: drawingResult,
-          name: "HI Pinata",
-          description: "HI Pinata",
-        });
+        const metadataJson = {
+          name: values.name || "Nifty Ink!!!",
+          description: "Hi from Nifty Ink!!!",
+          content: {
+            mime: "text/html",
+            uri: `https://nifty-view.vercel.app/ink/${drawingResult}`,
+          },
+          image: `https://nifty-view.vercel.app/ink/${drawingResult}`,
+          animation_url: `https://nifty-view.vercel.app/ink/${drawingResult}`,
+        };
+        // console.log("metadataJson", metadataJson);
 
         const jsonMetadataUri = await handleJsonUpload(metadataJson);
 
@@ -132,18 +137,18 @@ export const useCreateInk = (
 
         const { parameters, contractAddress } = await creatorClient.create1155({
           contract: {
-            name: "Nifty Ink",
-            uri: jsonMetadataUri,
+            name: "Nifty Ink on Zora!!!",
+            uri: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/bafkreigorjcxgchsxaccgn4w754nymzw6on4wuh4nbykiqvwrzgoohhf4a`,
           },
           token: {
-            tokenMetadataURI: jsonMetadataUri,
+            tokenMetadataURI: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${jsonMetadataUri}`,
           },
           // account to execute the transaction (the creator)
           account: connectedAddress!,
         });
-        alert(contractAddress);
+        console.log(`🎉 Ink created successfully in https://testnet.zora.co/collect/bsep:${contractAddress}/1`);
 
-        writeContract(parameters);
+        await writeContract(parameters);
         setSending(false);
         return;
       }

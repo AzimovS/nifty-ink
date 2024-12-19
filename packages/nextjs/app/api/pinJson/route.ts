@@ -1,15 +1,12 @@
 // pages/api/pinJsonWithPinata.ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import { NextResponse } from "next/server";
 
 const PINATA_JWT = process.env.PINATA_JWT;
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
+export async function POST(req: Request) {
   try {
-    const json = req.body;
+    const bodyText = await req.text();
+    const json = JSON.parse(bodyText);
 
     const data = JSON.stringify({
       pinataContent: json,
@@ -32,10 +29,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const result = (await response.json()) as { IpfsHash: string };
-
-    res.status(200).json({ ipfsUrl: `ipfs://${result.IpfsHash}` });
+    return NextResponse.json({ IpfsHash: result.IpfsHash });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    res.status(500).json({ error: errorMessage });
+    console.error("Error pinning file:", error);
+    return NextResponse.json({ error: (error as Error)?.message || "Internal Server Error" }, { status: 500 });
   }
 }

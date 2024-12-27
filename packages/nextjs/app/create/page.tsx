@@ -6,7 +6,7 @@ import { BrushControls } from "./_components/BrushControls";
 import { CanvasActions } from "./_components/CanvasActions";
 import { CanvasControls } from "./_components/CanvasControls";
 import { ColorPicker } from "./_components/ColorPicker";
-import { CreateInkForm } from "./_components/CreateInkForm";
+import { CreateInkModal } from "./_components/CreateInkModal";
 import { DraftManager } from "./_components/DraftManager";
 import { useCanvasActions } from "./_hooks/useCanvasActions";
 import { useCreateInk } from "./_hooks/useCreateInk";
@@ -37,7 +37,7 @@ const createRGBA = (r: number, g: number, b: number, a: number): string => {
 const CreateInk = () => {
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
-  const { address: connectedAddress } = useAccount();
+  const { address: connectedAddress, chain } = useAccount();
 
   const { width = 0, height = 0 } = useWindowSize({ debounceDelay: 500 });
   const calculatedCanvaSize = Math.round(0.85 * Math.min(width, height));
@@ -244,21 +244,24 @@ const CreateInk = () => {
 
   return (
     <div className="create-ink-container mt-5">
-      {portrait && (
+      {chain && (
         <div className="title-top">
-          <CreateInkForm onFinish={createInk} sending={sending} />
-          <CanvasControls
-            canvasDisabled={canvasDisabled}
-            isSaving={isSaving}
-            drawingCanvas={drawingCanvas}
-            saveDrawing={saveDrawing}
-            undo={undo}
-            handleChangeDrawing={handleChangeDrawing}
-            setCanvasDisabled={setCanvasDisabled}
-          />
+          <label htmlFor="create-ink-modal" className="btn btn-primary">
+            Ink!
+          </label>
+          <CreateInkModal modalId="create-ink-modal" chain={chain} />
         </div>
       )}
       <div className="canvas">
+        <CanvasControls
+          canvasDisabled={canvasDisabled}
+          isSaving={isSaving}
+          drawingCanvas={drawingCanvas}
+          saveDrawing={saveDrawing}
+          undo={undo}
+          handleChangeDrawing={handleChangeDrawing}
+          setCanvasDisabled={setCanvasDisabled}
+        />
         {width > 0 && height > 0 && isClient ? (
           <div
             style={{
@@ -291,20 +294,6 @@ const CreateInk = () => {
         )}
       </div>
       <div className={portrait ? "edit-tools-bottom" : "edit-tools"}>
-        {!portrait && (
-          <>
-            <CreateInkForm onFinish={createInk} sending={sending} />
-            <CanvasControls
-              canvasDisabled={canvasDisabled}
-              isSaving={isSaving}
-              drawingCanvas={drawingCanvas}
-              saveDrawing={saveDrawing}
-              undo={undo}
-              handleChangeDrawing={handleChangeDrawing}
-              setCanvasDisabled={setCanvasDisabled}
-            />
-          </>
-        )}
         <div className={portrait ? "" : "edit-tools-side"}>
           <ColorPicker
             color={color}

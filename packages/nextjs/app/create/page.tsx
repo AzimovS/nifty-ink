@@ -6,10 +6,9 @@ import { BrushControls } from "./_components/BrushControls";
 import { CanvasActions } from "./_components/CanvasActions";
 import { CanvasControls } from "./_components/CanvasControls";
 import { ColorPicker } from "./_components/ColorPicker";
-import { CreateInkModal } from "./_components/CreateInkModal";
 import { DraftManager } from "./_components/DraftManager";
+import { CreateInkModal } from "./_components/create/CreateInkModal";
 import { useCanvasActions } from "./_hooks/useCanvasActions";
-import { useCreateInk } from "./_hooks/useCreateInk";
 import { useHotkeyBindings } from "./_hooks/useHotkeyBindings";
 import "./styles.css";
 import LZ from "lz-string";
@@ -156,14 +155,6 @@ const CreateInk = () => {
     setIsSaving(false);
   };
 
-  const { createInk, sending, setSending } = useCreateInk(
-    drawingCanvas,
-    connectedAddress,
-    router,
-    saveDrawing,
-    handleChangeDrawing,
-  );
-
   useEffect(() => {
     const loadPage = async () => {
       console.log("loadpage");
@@ -244,12 +235,23 @@ const CreateInk = () => {
 
   return (
     <div className="create-ink-container mt-5">
-      {chain && (
+      {chain && connectedAddress && (
         <div className="title-top">
-          <label htmlFor="create-ink-modal" className="btn btn-primary">
+          <label
+            htmlFor="create-ink-modal"
+            className="btn btn-primary"
+            onClick={() => {
+              saveDrawing(drawingCanvas.current, true);
+            }}
+          >
             Ink!
           </label>
-          <CreateInkModal modalId="create-ink-modal" chain={chain} />
+          <CreateInkModal
+            modalId="create-ink-modal"
+            chain={chain}
+            connectedAddress={connectedAddress}
+            drawingCanvas={drawingCanvas}
+          />
         </div>
       )}
       <div className="canvas">

@@ -18,6 +18,7 @@ import { useAccount } from "wagmi";
 import Loader from "~~/components/Loader";
 import { CanvasDrawLines, Lines } from "~~/types/canvasDrawing";
 import { getColorOptions } from "~~/utils/constants";
+import { notification } from "~~/utils/scaffold-eth";
 
 let compressionWorker: Worker | null = null;
 
@@ -238,10 +239,17 @@ const CreateInk = () => {
       {chain && connectedAddress && (
         <div className="title-top">
           <label
-            htmlFor="create-ink-modal"
             className="btn btn-primary"
             onClick={() => {
+              if (currentLines.current.length === 0) {
+                notification.error("Your canvas is empty");
+                return;
+              }
               saveDrawing(drawingCanvas.current, true);
+              const targetElement = document.getElementById("create-ink-modal");
+              if (targetElement) {
+                targetElement.click();
+              }
             }}
           >
             Ink!

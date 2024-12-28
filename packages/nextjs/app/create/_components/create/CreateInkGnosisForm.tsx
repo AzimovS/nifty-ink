@@ -22,17 +22,17 @@ export const CreateInkGnosisForm = ({ connectedAddress, drawingCanvas }: CreateI
   const { writeContractAsync: writeYourContractAsync } = useScaffoldWriteContract("NiftyInk");
 
   const createInkGnosis = async (values: any) => {
-    if (!drawingCanvas?.current) {
-      notification.error("Your canvas is empty");
-      return;
-    }
     console.log("Inking:", values);
 
     setIsCreating(true);
 
     const imageData = drawingCanvas?.current?.canvas.drawing.toDataURL("image/png");
 
-    const compressedArray = LZ.compressToUint8Array(drawingCanvas?.current?.getSaveData());
+    const saveData = drawingCanvas?.current?.getSaveData();
+    if (!saveData) {
+      throw new Error("Failed to get save data from canvas");
+    }
+    const compressedArray = LZ.compressToUint8Array(saveData);
 
     const drawingBuffer = Buffer.from(compressedArray);
     const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");

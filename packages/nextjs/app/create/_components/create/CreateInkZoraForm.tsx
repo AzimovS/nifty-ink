@@ -80,17 +80,17 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
   const { writeContract } = useWriteContract();
 
   const createInkZora = async () => {
-    if (!drawingCanvas?.current) {
-      notification.error("Your canvas is empty");
-      return;
-    }
     console.log("Inking:");
 
     setIsCreating(true);
 
     const imageData = drawingCanvas?.current?.canvas.drawing.toDataURL("image/png");
 
-    const compressedArray = LZ.compressToUint8Array(drawingCanvas?.current?.getSaveData());
+    const saveData = drawingCanvas?.current?.getSaveData();
+    if (!saveData) {
+      throw new Error("Failed to get save data from the drawing canvas");
+    }
+    const compressedArray = LZ.compressToUint8Array(saveData);
 
     const drawingBuffer = Buffer.from(compressedArray);
     const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
@@ -103,32 +103,38 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
 
     const drawingResult = await handleFileUpload(drawingFile);
 
-    const metadataJson = {
+    const inkMetadataJson = {
       name: inkName,
       description: inkDescription,
       content: {
         mime: "text/html",
         uri: `https://nifty-view.vercel.app/ink/${drawingResult}`,
       },
-      image: `https://nifty-view.vercel.app/ink/${drawingResult}`,
+      image: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${imageResult}`,
       animation_url: `https://nifty-view.vercel.app/ink/${drawingResult}`,
     };
-    // console.log("metadataJson", metadataJson);
 
-    const jsonMetadataUri = await handleJsonUpload(metadataJson);
+    const contractMetadataJson = {
+      name: inkName,
+      description: inkDescription,
+      image: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${imageResult}`,
+    };
+
+    const contractMetadataUri = await handleJsonUpload(contractMetadataJson);
+    const inkMetadataUri = await handleJsonUpload(inkMetadataJson);
 
     // const { IpfsHash } = await pinFileWithPinata(file);
 
     const { parameters, contractAddress } = await creatorClient.create1155({
       contract: {
         name: contractName,
-        uri: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/bafkreigorjcxgchsxaccgn4w754nymzw6on4wuh4nbykiqvwrzgoohhf4a`,
+        uri: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${contractMetadataUri}`,
       },
       token: {
-        tokenMetadataURI: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${jsonMetadataUri}`,
+        tokenMetadataURI: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${inkMetadataUri}`,
       },
       // account to execute the transaction (the creator)
-      account: connectedAddress!,
+      account: connectedAddress,
     });
     console.log(`🎉 Ink created successfully in https://testnet.zora.co/collect/bsep:${contractAddress}/1`);
 

@@ -1,4 +1,5 @@
 import { CreateInkGnosisForm } from "./CreateInkGnosisForm";
+import { CreateInkZoraForm } from "./CreateInkZoraForm";
 import { Chain } from "viem";
 import { CanvasDrawLines } from "~~/types/canvasDrawing";
 import { isGnosisChain } from "~~/utils/helpers";
@@ -29,7 +30,15 @@ export const CreateInkModal = ({ modalId, chain, connectedAddress, drawingCanvas
                 <h2 className="text-2xl font-bold m-0">Create Ink</h2>
                 <span className="text-xs">You are about to deploy on {chain.name}</span>
               </div>
-              {isGnosis && <CreateInkGnosisForm connectedAddress={connectedAddress} drawingCanvas={drawingCanvas} />}
+              {isGnosis ? (
+                <CreateInkGnosisForm connectedAddress={connectedAddress} drawingCanvas={drawingCanvas} />
+              ) : (
+                <CreateInkZoraForm
+                  connectedAddress={connectedAddress}
+                  drawingCanvas={drawingCanvas}
+                  chainId={chain.id}
+                />
+              )}
             </div>
           </div>
         </label>

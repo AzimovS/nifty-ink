@@ -71,8 +71,9 @@ type CreateInkGnosisFormProps = {
 export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: CreateInkGnosisFormProps) => {
   const router = useRouter();
   const [isCreating, setIsCreating] = useState<boolean>(false);
+  const [contractName, setContractName] = useState<string>("");
   const [inkName, setInkName] = useState<string>("");
-  const [inkNumber, setInkNumber] = useState<number>();
+  const [inkDescription, setInkDescription] = useState<string>("");
   const publicClient = usePublicClient()!;
 
   const creatorClient = createCreatorClient({ chainId, publicClient });
@@ -103,8 +104,8 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
     const drawingResult = await handleFileUpload(drawingFile);
 
     const metadataJson = {
-      name: "Nifty Ink!!!",
-      description: "Hi from Nifty Ink!!!",
+      name: inkName,
+      description: inkDescription,
       content: {
         mime: "text/html",
         uri: `https://nifty-view.vercel.app/ink/${drawingResult}`,
@@ -120,7 +121,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
 
     const { parameters, contractAddress } = await creatorClient.create1155({
       contract: {
-        name: "Nifty Ink on Zora!!!",
+        name: contractName,
         uri: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/bafkreigorjcxgchsxaccgn4w754nymzw6on4wuh4nbykiqvwrzgoohhf4a`,
       },
       token: {
@@ -138,48 +139,60 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     console.log("Ink Name:", inkName);
-    console.log("Ink Number:", inkNumber);
     createInkZora();
   };
 
   return (
-    <div className="flex justify-center">
-      <form className="form-control w-full max-w-xs" onSubmit={handleSubmit}>
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text">Ink Name</span>
-          </label>
-          <input
-            type="text"
-            placeholder="name"
-            className="input input-sm input-bordered w-full max-w-xs"
-            value={inkName}
-            onChange={e => setInkName(e.target.value)}
-            required
-          />
+    <form className="flex justify-center form-control w-full max-w-xs" onSubmit={handleSubmit}>
+      <div className="flex gap-2">
+        <div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Contract Name</span>
+            </label>
+            <input
+              type="text"
+              placeholder="name"
+              className="input input-sm input-bordered w-full max-w-xs"
+              value={contractName}
+              onChange={e => setContractName(e.target.value)}
+              required
+            />
+          </div>
         </div>
-
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text">Ink Number</span>
-          </label>
-          <input
-            type="number"
-            placeholder="limit"
-            className="input input-sm input-bordered w-full max-w-xs"
-            value={inkNumber}
-            onChange={e => setInkNumber(Number(e.target.value))}
-            min="0" // check if minimum works
-            required
-          />
+        <div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Ink Name</span>
+            </label>
+            <input
+              type="text"
+              placeholder="name"
+              className="input input-sm input-bordered w-full max-w-xs"
+              value={inkName}
+              onChange={e => setInkName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Ink Description</span>
+            </label>
+            <textarea
+              placeholder="description"
+              className="textarea textarea-md textarea-bordered w-full max-w-xs"
+              value={inkDescription}
+              onChange={e => setInkDescription(e.target.value)}
+              required
+            />
+          </div>
         </div>
-
-        <div className="form-control mt-6">
-          <button className="btn btn-primary" disabled={isCreating} type="submit">
-            Ink!
-          </button>
-        </div>
-      </form>
-    </div>
+      </div>
+      <div className="form-control mt-6">
+        <button className="btn btn-primary" disabled={isCreating} type="submit">
+          Ink!
+        </button>
+      </div>
+    </form>
   );
 };

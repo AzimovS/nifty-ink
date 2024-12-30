@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createCreatorClient } from "@zoralabs/protocol-sdk";
 import LZ from "lz-string";
@@ -70,14 +70,44 @@ type CreateInkGnosisFormProps = {
 
 export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: CreateInkGnosisFormProps) => {
   const router = useRouter();
+  const NEW_CONTRACT_VAL = "newcontract";
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [contractName, setContractName] = useState<string>("");
   const [inkName, setInkName] = useState<string>("");
   const [inkDescription, setInkDescription] = useState<string>("");
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [selectedContract, setSelectedContract] = useState<string>(NEW_CONTRACT_VAL);
   const publicClient = usePublicClient()!;
 
   const creatorClient = createCreatorClient({ chainId, publicClient });
   const { writeContract } = useWriteContract();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Fetch data from the API
+      const response = await fetch(`https://api.indexsupply.net/query?chain=${chainId}`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify([
+          {
+            event_signatures: [
+              "SetupNewContract(address indexed newContract, address indexed creator, address indexed defaultAdmin, string contractURI, string name, (uint32,uint32,address) defaultRoyaltyConfiguration)",
+            ],
+            query: `select newcontract, name
+                    from setupnewcontract
+                    where creator = ${connectedAddress}`,
+          },
+        ]),
+        method: "POST",
+      });
+
+      const apiResult = await response.json();
+      setContracts(apiResult?.result?.[0]);
+    };
+
+    fetchData();
+  }, []);
 
   const createInkZora = async () => {
     console.log("Inking:");
@@ -140,6 +170,9 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
 
     await writeContract(parameters);
     setIsCreating(false);
+    setContractName("");
+    setInkName("");
+    setInkDescription("");
   };
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -154,14 +187,34 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
         <div>
           <div className="form-control">
             <label className="label">
+              <span className="label-text">Select Contract</span>
+            </label>
+            <select
+              className="select select-sm select-bordered rounded-xl w-full max-w-xs"
+              value={selectedContract}
+              onChange={e => setSelectedContract(e.target.value)}
+              disabled={!contracts}
+              required
+            >
+              <option value={NEW_CONTRACT_VAL}>New Contract</option>
+              {contracts?.map(contract => (
+                <option key={contract[0]} value={contract}>
+                  {contract[1]} {contract[0].slice(0, 4)}...{contract[0].slice(-4)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-control">
+            <label className="label">
               <span className="label-text">Contract Name</span>
             </label>
             <input
               type="text"
               placeholder="name"
-              className="input input-sm input-bordered w-full max-w-xs"
-              value={contractName}
+              className="input input-sm input-bordered rounded-xl w-full max-w-xs"
+              value={selectedContract !== NEW_CONTRACT_VAL ? selectedContract?.split(",")[1] : contractName}
               onChange={e => setContractName(e.target.value)}
+              disabled={selectedContract !== NEW_CONTRACT_VAL}
               required
             />
           </div>
@@ -174,7 +227,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
             <input
               type="text"
               placeholder="name"
-              className="input input-sm input-bordered w-full max-w-xs"
+              className="input input-sm input-bordered rounded-xl w-full max-w-xs"
               value={inkName}
               onChange={e => setInkName(e.target.value)}
               required
@@ -186,7 +239,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
             </label>
             <textarea
               placeholder="description"
-              className="textarea textarea-md textarea-bordered w-full max-w-xs"
+              className="textarea textarea-md textarea-bordered rounded-xl w-full max-w-xs"
               value={inkDescription}
               onChange={e => setInkDescription(e.target.value)}
               required

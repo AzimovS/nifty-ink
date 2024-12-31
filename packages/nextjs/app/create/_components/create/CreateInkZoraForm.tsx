@@ -62,21 +62,21 @@ const handleJsonUpload = async (json: object) => {
   }
 };
 
-type CreateInkGnosisFormProps = {
+type CreateInkZoraFormProps = {
   connectedAddress: string;
   drawingCanvas: React.RefObject<CanvasDrawLines>;
   chainId: number;
 };
 
-export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: CreateInkGnosisFormProps) => {
+export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: CreateInkZoraFormProps) => {
   const router = useRouter();
-  const NEW_CONTRACT_VAL = "newcontract";
+  const NEW_COLLECTION_VAL = "newcollection";
   const [isCreating, setIsCreating] = useState<boolean>(false);
-  const [contractName, setContractName] = useState<string>("");
+  const [collectionName, setCollectionName] = useState<string>("");
   const [inkName, setInkName] = useState<string>("");
   const [inkDescription, setInkDescription] = useState<string>("");
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [selectedContract, setSelectedContract] = useState<string>(NEW_CONTRACT_VAL);
+  const [collections, setCollections] = useState<any[]>([]);
+  const [selectedContract, setSelectedContract] = useState<string>(NEW_COLLECTION_VAL);
   const publicClient = usePublicClient()!;
 
   const creatorClient = createCreatorClient({ chainId, publicClient });
@@ -103,7 +103,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
       });
 
       const apiResult = await response.json();
-      setContracts(apiResult?.result?.[0]);
+      setCollections(apiResult?.result?.[0].slice(1));
     };
 
     fetchData();
@@ -153,24 +153,21 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
     const contractMetadataUri = await handleJsonUpload(contractMetadataJson);
     const inkMetadataUri = await handleJsonUpload(inkMetadataJson);
 
-    // const { IpfsHash } = await pinFileWithPinata(file);
-
     const { parameters, contractAddress } = await creatorClient.create1155({
       contract: {
-        name: contractName,
+        name: collectionName,
         uri: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${contractMetadataUri}`,
       },
       token: {
         tokenMetadataURI: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${inkMetadataUri}`,
       },
-      // account to execute the transaction (the creator)
       account: connectedAddress,
     });
     console.log(`🎉 Ink created successfully in https://testnet.zora.co/collect/bsep:${contractAddress}/1`);
 
     await writeContract(parameters);
     setIsCreating(false);
-    setContractName("");
+    setCollectionName("");
     setInkName("");
     setInkDescription("");
   };
@@ -187,40 +184,53 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
         <div>
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Select Contract</span>
+              <span className="label-text">Select Collection</span>
             </label>
             <select
               className="select select-sm select-bordered rounded-xl w-full max-w-xs"
               value={selectedContract}
               onChange={e => setSelectedContract(e.target.value)}
-              disabled={!contracts}
+              disabled={!collections}
               required
             >
-              <option value={NEW_CONTRACT_VAL}>New Contract</option>
-              {contracts?.map(contract => (
-                <option key={contract[0]} value={contract}>
-                  {contract[1]} {contract[0].slice(0, 4)}...{contract[0].slice(-4)}
+              <option value={NEW_COLLECTION_VAL}>New Collection</option>
+              {collections?.map(collection => (
+                <option key={collection[0]} value={collection}>
+                  {collection[1]} {collection[0].slice(0, 4)}...{collection[0].slice(-4)}
                 </option>
               ))}
             </select>
           </div>
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Contract Name</span>
+              <span className="label-text">Collection Name</span>
             </label>
             <input
               type="text"
               placeholder="name"
               className="input input-sm input-bordered rounded-xl w-full max-w-xs"
-              value={selectedContract !== NEW_CONTRACT_VAL ? selectedContract?.split(",")[1] : contractName}
-              onChange={e => setContractName(e.target.value)}
-              disabled={selectedContract !== NEW_CONTRACT_VAL}
+              value={selectedContract !== NEW_COLLECTION_VAL ? selectedContract?.split(",")[1] : collectionName}
+              onChange={e => setCollectionName(e.target.value)}
+              disabled={selectedContract !== NEW_COLLECTION_VAL}
+              required
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Collection Description</span>
+            </label>
+            <textarea
+              placeholder="description"
+              className="textarea textarea-md textarea-bordered rounded-xl w-full max-w-xs"
+              value={inkDescription}
+              onChange={e => setInkDescription(e.target.value)}
+              disabled={selectedContract !== NEW_COLLECTION_VAL}
               required
             />
           </div>
         </div>
         <div>
-          <div className="form-control">
+          <div className="form-control mt-[68px]">
             <label className="label">
               <span className="label-text">Ink Name</span>
             </label>

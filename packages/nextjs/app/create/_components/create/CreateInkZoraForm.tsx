@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createCreatorClient } from "@zoralabs/protocol-sdk";
 import LZ from "lz-string";
 import { usePublicClient, useWriteContract } from "wagmi";
+import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { CanvasDrawLines } from "~~/types/canvasDrawing";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -69,14 +69,16 @@ type CreateInkZoraFormProps = {
 };
 
 export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: CreateInkZoraFormProps) => {
-  const router = useRouter();
+  const IPFS_BASE_URL = "https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/";
   const NEW_COLLECTION_VAL = "newcollection";
-  const [isCreating, setIsCreating] = useState<boolean>(false);
+  const [formState, setFormState] = useState<"fill" | "loading" | "success">("fill");
   const [collectionName, setCollectionName] = useState<string>("");
+  const [collectionDescription, setCollectionDescription] = useState<string>("");
   const [inkName, setInkName] = useState<string>("");
   const [inkDescription, setInkDescription] = useState<string>("");
   const [collections, setCollections] = useState<any[]>([]);
   const [selectedContract, setSelectedContract] = useState<string>(NEW_COLLECTION_VAL);
+  const [createdContract, setCreatedContract] = useState<string>("");
   const publicClient = usePublicClient()!;
 
   const creatorClient = createCreatorClient({ chainId, publicClient });
@@ -110,9 +112,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
   }, []);
 
   const createInkZora = async () => {
-    console.log("Inking:");
-
-    setIsCreating(true);
+    setFormState("loading");
 
     const imageData = drawingCanvas?.current?.canvas.drawing.toDataURL("image/png");
 
@@ -120,14 +120,12 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
     if (!saveData) {
       throw new Error("Failed to get save data from the drawing canvas");
     }
-    const compressedArray = LZ.compressToUint8Array(saveData);
-
-    const drawingBuffer = Buffer.from(compressedArray);
-    const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
 
     const imageFile = dataURLToFile(imageData, "drawing.png");
     const imageResult = await handleFileUpload(imageFile);
 
+    const compressedArray = LZ.compressToUint8Array(saveData);
+    const drawingBuffer = Buffer.from(compressedArray);
     const drawingBlob = new Blob([drawingBuffer], { type: "application/octet-stream" });
     const drawingFile = new File([drawingBlob], "drawing.lz", { type: "application/octet-stream" });
 
@@ -140,33 +138,37 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
         mime: "text/html",
         uri: `https://nifty-view.vercel.app/ink/${drawingResult}`,
       },
-      image: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${imageResult}`,
+      image: `${IPFS_BASE_URL}${imageResult}`,
       animation_url: `https://nifty-view.vercel.app/ink/${drawingResult}`,
     };
 
-    const contractMetadataJson = {
-      name: inkName,
-      description: inkDescription,
-      image: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${imageResult}`,
-    };
+    let contractMetadataUri = "";
+    if (selectedContract !== NEW_COLLECTION_VAL) {
+      const contractMetadataJson = {
+        name: collectionName,
+        description: collectionDescription,
+        image: `${IPFS_BASE_URL}${imageResult}`,
+      };
 
-    const contractMetadataUri = await handleJsonUpload(contractMetadataJson);
+      contractMetadataUri = (await handleJsonUpload(contractMetadataJson)) || "";
+    }
+
     const inkMetadataUri = await handleJsonUpload(inkMetadataJson);
 
     const { parameters, contractAddress } = await creatorClient.create1155({
       contract: {
         name: collectionName,
-        uri: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${contractMetadataUri}`,
+        uri: `${IPFS_BASE_URL}${contractMetadataUri}`,
       },
       token: {
-        tokenMetadataURI: `https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/${inkMetadataUri}`,
+        tokenMetadataURI: `${IPFS_BASE_URL}${inkMetadataUri}`,
       },
       account: connectedAddress,
     });
-    console.log(`🎉 Ink created successfully in https://testnet.zora.co/collect/bsep:${contractAddress}/1`);
+    setCreatedContract(contractAddress);
 
     await writeContract(parameters);
-    setIsCreating(false);
+    setFormState("success");
     setCollectionName("");
     setInkName("");
     setInkDescription("");
@@ -178,7 +180,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
     createInkZora();
   };
 
-  return (
+  return formState !== "success" ? (
     <form className="flex justify-center form-control w-full max-w-xs" onSubmit={handleSubmit}>
       <div className="flex gap-2">
         <div>
@@ -222,8 +224,8 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
             <textarea
               placeholder="description"
               className="textarea textarea-md textarea-bordered rounded-xl w-full max-w-xs"
-              value={inkDescription}
-              onChange={e => setInkDescription(e.target.value)}
+              value={collectionDescription}
+              onChange={e => setCollectionDescription(e.target.value)}
               disabled={selectedContract !== NEW_COLLECTION_VAL}
               required
             />
@@ -258,10 +260,26 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
         </div>
       </div>
       <div className="form-control mt-6">
-        <button className="btn btn-primary" disabled={isCreating} type="submit">
-          Ink!
+        <button className="btn btn-primary" disabled={formState === "loading"} type="submit">
+          {formState === "loading" && <span className="loading loading-spinner loading-sm"></span>}
+          <span>Ink!</span>
         </button>
       </div>
     </form>
+  ) : (
+    <div className="success-message">
+      <CheckCircleIcon className="h-24 w-24 mx-auto text-green-500" />
+      <p>
+        🎉 Check your Ink on Zora{" "}
+        <a
+          className="link"
+          href={`https://testnet.zora.co/collect/bsep:${createdContract}/1`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Here
+        </a>
+      </p>
+    </div>
   );
 };

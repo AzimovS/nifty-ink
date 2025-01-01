@@ -86,6 +86,15 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
   const { writeContractAsync, status } = useWriteContract();
 
   useEffect(() => {
+    if (status === "error") {
+      notification.error("Failed to create the ink");
+      setFormState("fill");
+    } else if (status === "success") {
+      setFormState("success");
+    }
+  }, [status]);
+
+  useEffect(() => {
     const fetchData = async () => {
       // Fetch data from the API
       const response = await fetch(`https://api.indexsupply.net/query?chain=${chainId}`, {
@@ -190,16 +199,10 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
 
     const parameters = await create1155(imageResult, inkMetadataUri);
     await writeContractAsync(parameters);
-    console.log("success", status);
 
     if (status === "error") {
       notification.error("Failed to create the ink");
       setFormState("fill");
-    } else {
-      setFormState("success");
-      setCollectionName("");
-      setInkName("");
-      setInkDescription("");
     }
   };
 

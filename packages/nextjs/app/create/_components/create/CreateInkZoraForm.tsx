@@ -70,6 +70,7 @@ type CreateInkZoraFormProps = {
 
 export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: CreateInkZoraFormProps) => {
   const IPFS_BASE_URL = "https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/";
+  const VIEW_INK_URL = "https://nifty-view.vercel.app/ink/";
   const NEW_COLLECTION_VAL = "newcollection";
   const [formState, setFormState] = useState<"fill" | "loading" | "success">("fill");
   const [collectionName, setCollectionName] = useState<string>("");
@@ -82,7 +83,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
   const publicClient = usePublicClient()!;
 
   const creatorClient = createCreatorClient({ chainId, publicClient });
-  const { writeContract } = useWriteContract();
+  const { writeContractAsync, status } = useWriteContract();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,24 +112,17 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
     fetchData();
   }, []);
 
-  const createInkZora = async () => {
-    setFormState("loading");
-
-    const imageData = drawingCanvas?.current?.canvas.drawing.toDataURL("image/png");
-
+  const uploadInkMetadata = async (imageResult: string) => {
     const saveData = drawingCanvas?.current?.getSaveData();
     if (!saveData) {
-      throw new Error("Failed to get save data from the drawing canvas");
+      setFormState("fill");
+      notification.error("Failed to get save data from canvas");
+      return;
     }
-
-    const imageFile = dataURLToFile(imageData, "drawing.png");
-    const imageResult = await handleFileUpload(imageFile);
-
     const compressedArray = LZ.compressToUint8Array(saveData);
     const drawingBuffer = Buffer.from(compressedArray);
     const drawingBlob = new Blob([drawingBuffer], { type: "application/octet-stream" });
     const drawingFile = new File([drawingBlob], "drawing.lz", { type: "application/octet-stream" });
-
     const drawingResult = await handleFileUpload(drawingFile);
 
     const inkMetadataJson = {
@@ -136,48 +130,77 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
       description: inkDescription,
       content: {
         mime: "text/html",
-        uri: `https://nifty-view.vercel.app/ink/${drawingResult}`,
+        uri: `${VIEW_INK_URL}${drawingResult}`,
       },
       image: `${IPFS_BASE_URL}${imageResult}`,
-      animation_url: `https://nifty-view.vercel.app/ink/${drawingResult}`,
+      animation_url: `${VIEW_INK_URL}${drawingResult}`,
     };
+    const inkMetadataUri = await handleJsonUpload(inkMetadataJson);
+    return inkMetadataUri;
+  };
 
-    let contractMetadataUri = "";
-    if (selectedContract !== NEW_COLLECTION_VAL) {
+  const create1155 = async (imageResult: string, inkMetadataUri: string) => {
+    if (selectedContract === NEW_COLLECTION_VAL) {
       const contractMetadataJson = {
         name: collectionName,
         description: collectionDescription,
         image: `${IPFS_BASE_URL}${imageResult}`,
       };
 
-      contractMetadataUri = (await handleJsonUpload(contractMetadataJson)) || "";
+      const contractMetadataUri = (await handleJsonUpload(contractMetadataJson)) || "";
+      const { parameters, contractAddress } = await creatorClient.create1155({
+        contract: {
+          name: collectionName,
+          uri: `${IPFS_BASE_URL}${contractMetadataUri}`,
+        },
+        token: {
+          tokenMetadataURI: `${IPFS_BASE_URL}${inkMetadataUri}`,
+        },
+        account: connectedAddress,
+      });
+      setCreatedContract(contractAddress);
+      return parameters;
+    } else {
+      const { parameters } = await creatorClient.create1155OnExistingContract({
+        contractAddress: selectedContract?.split(",")[0],
+        token: {
+          tokenMetadataURI: `${IPFS_BASE_URL}${inkMetadataUri}`,
+        },
+        account: connectedAddress,
+      });
+      setCreatedContract(selectedContract?.split(",")[0]);
+      return parameters;
     }
-
-    const inkMetadataUri = await handleJsonUpload(inkMetadataJson);
-
-    const { parameters, contractAddress } = await creatorClient.create1155({
-      contract: {
-        name: collectionName,
-        uri: `${IPFS_BASE_URL}${contractMetadataUri}`,
-      },
-      token: {
-        tokenMetadataURI: `${IPFS_BASE_URL}${inkMetadataUri}`,
-      },
-      account: connectedAddress,
-    });
-    setCreatedContract(contractAddress);
-
-    await writeContract(parameters);
-    setFormState("success");
-    setCollectionName("");
-    setInkName("");
-    setInkDescription("");
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    console.log("Ink Name:", inkName);
-    createInkZora();
+    setFormState("loading");
+
+    const imageData = drawingCanvas?.current?.canvas.drawing.toDataURL("image/png");
+    const imageFile = dataURLToFile(imageData, "drawing.png");
+    const imageResult = await handleFileUpload(imageFile);
+
+    const inkMetadataUri = await uploadInkMetadata(imageResult);
+    if (!inkMetadataUri) {
+      setFormState("fill");
+      notification.error("Failed to upload ink metadata");
+      return;
+    }
+
+    const parameters = await create1155(imageResult, inkMetadataUri);
+    await writeContractAsync(parameters);
+    console.log("success", status);
+
+    if (status === "error") {
+      notification.error("Failed to create the ink");
+      setFormState("fill");
+    } else {
+      setFormState("success");
+      setCollectionName("");
+      setInkName("");
+      setInkDescription("");
+    }
   };
 
   return formState !== "success" ? (
@@ -273,7 +296,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
         🎉 Check your Ink on Zora{" "}
         <a
           className="link"
-          href={`https://testnet.zora.co/collect/bsep:${createdContract}/1`}
+          href={`https://testnet.zora.co/manage/1155/bsep:${createdContract}`}
           target="_blank"
           rel="noopener noreferrer"
         >

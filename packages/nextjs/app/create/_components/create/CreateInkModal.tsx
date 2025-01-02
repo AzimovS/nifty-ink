@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { CreateInkGnosisForm } from "./CreateInkGnosisForm";
 import { CreateInkZoraForm } from "./CreateInkZoraForm";
 import { Chain } from "viem";
@@ -27,8 +28,16 @@ export const CreateInkModal = ({ modalId, chain, connectedAddress, drawingCanvas
           <div className="space-y-3 py-6">
             <div className="flex flex-col items-center gap-2">
               <div>
-                <h2 className="text-2xl font-bold m-0">Create Ink</h2>
-                <span className="text-xs">You are about to deploy on {chain.name}</span>
+                <h2 className="text-2xl font-bold m-0 flex justify-center gap-2">
+                  Create Ink on{" "}
+                  <Image
+                    src={`/${isGnosis ? "gnosisChain.png" : "baseChain.png"}`}
+                    alt="chain"
+                    width="32"
+                    height="32"
+                    className="object-contain aspect-square"
+                  />
+                </h2>
               </div>
               {isGnosis ? (
                 <CreateInkGnosisForm connectedAddress={connectedAddress} drawingCanvas={drawingCanvas} />

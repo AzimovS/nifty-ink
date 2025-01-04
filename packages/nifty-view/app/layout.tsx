@@ -1,6 +1,8 @@
+import '../styles/globals.css';
+
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
-    <html suppressHydrationWarning>
+    <html data-theme="light">
       <body>{children}</body>
     </html>
   );

@@ -42,8 +42,7 @@ const NiftyView = ({ params }: { params: { cid: string } }) => {
   }, []);
 
   return (
-    <>
-      HI
+    <div className="flex flex-col items-center justify-center min-h-screen">
       <button
         className="btn btn-primary"
         onClick={() => {
@@ -54,19 +53,15 @@ const NiftyView = ({ params }: { params: { cid: string } }) => {
       </button>
       <CanvasDraw
         ref={drawingCanvas}
-        canvasWidth={200}
-        canvasHeight={200}
-        // brushColor={color}
-        // lazyRadius={1}
-        // brushRadius={brushRadius}
-        // disabled={canvasDisabled}
-        // onChange={handleCanvasChange}
-        // saveData={initialDrawing}
-        // immediateLoading={true} //drawingSize >= 10000}
+        canvasWidth={500}
+        canvasHeight={500}
+        disabled={true}
         loadTimeOffset={3}
+        hideInterface={true}
+        hideGrid={true}
+        className="border-2 border-gray-300 rounded-lg"
       />
-      End
-    </>
+    </div>
   );
 };
 

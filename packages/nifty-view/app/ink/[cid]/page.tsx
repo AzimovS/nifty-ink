@@ -9,6 +9,8 @@ import { CanvasDrawLines } from "../../../types/canvasDrawing";
 const NiftyView = ({ params }: { params: { cid: string } }) => {
   const cid = params?.cid;
   const [calculatedCanvaSize, setCalculatedCanvaSize] = useState<number>(500);
+  const [isDrawing, setIsDrawing] = useState<boolean>(false);
+  const totalLines = useRef<number>(0);
 
   const drawingCanvas = useRef<CanvasDrawLines>(null);
   const [drawingData, setDrawingData] = useState<string>("");
@@ -27,6 +29,8 @@ const NiftyView = ({ params }: { params: { cid: string } }) => {
       console.log(`decompressing ${new Date().toISOString()}`);
 
       const decompressed = LZ.decompressFromUint8Array(new Uint8Array(drawingContent));
+      const parsedDrawing = JSON.parse(decompressed);
+      totalLines.current = parsedDrawing.lines.length;
 
       console.log(`finding length ${new Date().toISOString()}`);
       setDrawingData(decompressed);
@@ -47,10 +51,12 @@ const NiftyView = ({ params }: { params: { cid: string } }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <button
-        className="btn btn-primary"
+        className="btn btn-primary mb-1"
         onClick={() => {
+          setIsDrawing(true);
           drawingCanvas.current?.loadSaveData(drawingData, false);
         }}
+        disabled={isDrawing}
       >
         Play
       </button>
@@ -59,10 +65,20 @@ const NiftyView = ({ params }: { params: { cid: string } }) => {
         canvasWidth={calculatedCanvaSize}
         canvasHeight={calculatedCanvaSize}
         disabled={true}
-        loadTimeOffset={3}
+        loadTimeOffset={5}
         hideInterface={true}
         hideGrid={true}
-        className="border-2 border-gray-300 rounded-lg"
+        onChange={() => {
+          try {
+            const drawnLines = drawingCanvas?.current?.lines.length;
+            if ((drawnLines ?? 0) >= totalLines?.current && isDrawing) {
+              setIsDrawing(false);
+            }
+          } catch (e) {
+            console.log(e);
+          }
+        }}
+        className="border-2 border-gray-300 rounded-md"
       />
     </div>
   );

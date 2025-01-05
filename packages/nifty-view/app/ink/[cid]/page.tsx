@@ -9,7 +9,7 @@ import { CanvasDrawLines } from "../../../types/canvasDrawing";
 const NiftyView = ({ params }: { params: { cid: string } }) => {
   const cid = params?.cid;
   const [calculatedCanvaSize, setCalculatedCanvaSize] = useState<number>(500);
-  const [isDrawing, setIsDrawing] = useState<boolean>(false);
+  const [isDrawing, setIsDrawing] = useState<boolean>(true);
   const totalLines = useRef<number>(0);
 
   const drawingCanvas = useRef<CanvasDrawLines>(null);
@@ -50,16 +50,28 @@ const NiftyView = ({ params }: { params: { cid: string } }) => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      <button
-        className="btn btn-primary mb-1"
-        onClick={() => {
-          setIsDrawing(true);
-          drawingCanvas.current?.loadSaveData(drawingData, false);
-        }}
-        disabled={isDrawing}
-      >
-        Play
-      </button>
+      <div className="flex gap-2 mb-1">
+        <button
+          className="btn btn-primary "
+          onClick={() => {
+            setIsDrawing(true);
+            drawingCanvas.current?.loadSaveData(drawingData, false);
+          }}
+          disabled={isDrawing}
+        >
+          Play
+        </button>
+        {isDrawing && (
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setIsDrawing(false);
+            }}
+          >
+            Show Result
+          </button>
+        )}
+      </div>
       <CanvasDraw
         ref={drawingCanvas}
         canvasWidth={calculatedCanvaSize}

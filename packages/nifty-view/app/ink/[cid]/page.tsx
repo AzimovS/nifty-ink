@@ -8,6 +8,7 @@ import { CanvasDrawLines } from "../../../types/canvasDrawing";
 
 const NiftyView = ({ params }: { params: { cid: string } }) => {
   const cid = params?.cid;
+  const [calculatedCanvaSize, setCalculatedCanvaSize] = useState<number>(500);
 
   const drawingCanvas = useRef<CanvasDrawLines>(null);
   const [drawingData, setDrawingData] = useState<string>("");
@@ -38,7 +39,9 @@ const NiftyView = ({ params }: { params: { cid: string } }) => {
   };
 
   useEffect(() => {
+    const size = Math.round(0.7 * Math.min(window.innerWidth, window.innerHeight));
     fetchAndShowDrawing();
+    setCalculatedCanvaSize(size);
   }, []);
 
   return (
@@ -53,8 +56,8 @@ const NiftyView = ({ params }: { params: { cid: string } }) => {
       </button>
       <CanvasDraw
         ref={drawingCanvas}
-        canvasWidth={500}
-        canvasHeight={500}
+        canvasWidth={calculatedCanvaSize}
+        canvasHeight={calculatedCanvaSize}
         disabled={true}
         loadTimeOffset={3}
         hideInterface={true}

@@ -21,80 +21,63 @@ export const CreateInkGnosisForm = ({ connectedAddress, drawingCanvas }: CreateI
   const { writeContractAsync: writeYourContractAsync } = useScaffoldWriteContract("NiftyInk");
 
   const createInkGnosis = async () => {
-    const imageData = drawingCanvas?.current?.canvas.drawing.toDataURL("image/png");
-    const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
-    const imageHash = await Hash.of(imageBuffer);
-    console.log("imageHash", imageHash);
-
-    const saveData = drawingCanvas?.current?.getSaveData();
-    if (!saveData) {
-      throw new Error("Failed to get save data from canvas");
-    }
-    const compressedArray = LZ.compressToUint8Array(saveData);
-    const drawingBuffer = Buffer.from(compressedArray);
-    const drawingHash = await Hash.of(drawingBuffer);
-    console.log("drawingHash", drawingHash);
-
-    const timeInMs = new Date();
-    const currentInk = {
-      attributes: [
-        {
-          trait_type: "Limit",
-          value: inkNumber.toString(),
-        },
-      ],
-      name: inkName,
-      description: `A Nifty Ink by ${connectedAddress} on ${timeInMs}`,
-      drawing: drawingHash,
-      image: `https://ipfs.io/ipfs/${imageHash}`,
-      external_url: `https://nifty.ink/${drawingHash}`,
-    };
-
-    const inkStr = JSON.stringify(currentInk);
-    const inkBuffer = Buffer.from(inkStr);
-    const jsonHash = await Hash.of(inkBuffer);
-    console.log("jsonHash", jsonHash);
-
-    await checkAddressAndFund(connectedAddress);
-
     try {
-      const drawingResult = addToIPFS(drawingBuffer);
-      const imageResult = addToIPFS(imageBuffer);
-      const inkResult = addToIPFS(inkBuffer);
+      setIsCreating(true);
 
-      await Promise.all([drawingResult, imageResult, inkResult]).then(values => {
-        console.log("FINISHED UPLOADING TO PINNER", values);
-      });
-    } catch (e) {
-      console.log(e);
-      setIsCreating(false);
-      notification.error(`📛 Ink upload failed. Please wait a moment and try again ${(e as Error).message}`);
-      return;
-    }
+      const imageData = drawingCanvas?.current?.canvas.drawing.toDataURL("image/png");
+      const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
+      const imageHash = await Hash.of(imageBuffer);
 
-    try {
+      const saveData = drawingCanvas?.current?.getSaveData();
+      if (!saveData) {
+        throw new Error("Failed to get save data from canvas");
+      }
+      const compressedArray = LZ.compressToUint8Array(saveData);
+      const drawingBuffer = Buffer.from(compressedArray);
+      const drawingHash = await Hash.of(drawingBuffer);
+
+      const timeInMs = new Date();
+      const currentInk = {
+        attributes: [
+          {
+            trait_type: "Limit",
+            value: inkNumber.toString(),
+          },
+        ],
+        name: inkName,
+        description: `A Nifty Ink by ${connectedAddress} on ${timeInMs}`,
+        drawing: drawingHash,
+        image: `https://ipfs.io/ipfs/${imageHash}`,
+        external_url: `https://nifty.ink/${drawingHash}`,
+      };
+
+      const inkStr = JSON.stringify(currentInk);
+      const inkBuffer = Buffer.from(inkStr);
+      const jsonHash = await Hash.of(inkBuffer);
+
+      await checkAddressAndFund(connectedAddress);
+
+      const uploadResults = await Promise.all([addToIPFS(drawingBuffer), addToIPFS(imageBuffer), addToIPFS(inkBuffer)]);
+
+      console.log("FINISHED UPLOADING TO PINNER", uploadResults);
+
       await writeYourContractAsync({
         functionName: "createInk",
         args: [drawingHash, jsonHash, BigInt(inkNumber)],
       });
 
-      router.push("/ink/" + drawingHash);
+      router.push(`/ink/${drawingHash}`);
     } catch (e) {
-      console.log(e);
+      console.error(e);
+      notification.error(`📛 Ink creation failed. Please wait a moment and try again: ${(e as Error).message}`);
+    } finally {
+      setIsCreating(false);
     }
   };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    console.log("Ink Number:", inkNumber);
-    try {
-      createInkGnosis();
-    } catch (e) {
-      console.log(e);
-      notification.error(`📛 Ink upload failed. Please wait a moment and try again ${(e as Error).message}`);
-    } finally {
-      setIsCreating(false);
-    }
+    createInkGnosis();
   };
 
   return (

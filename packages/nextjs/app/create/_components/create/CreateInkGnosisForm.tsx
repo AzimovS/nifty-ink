@@ -16,44 +16,34 @@ type CreateInkGnosisFormProps = {
 export const CreateInkGnosisForm = ({ connectedAddress, drawingCanvas }: CreateInkGnosisFormProps) => {
   const router = useRouter();
   const [isCreating, setIsCreating] = useState<boolean>(false);
-
   const [inkName, setInkName] = useState<string>("");
-  const [inkNumber, setInkNumber] = useState<number>();
+  const [inkNumber, setInkNumber] = useState<number>(0);
   const { writeContractAsync: writeYourContractAsync } = useScaffoldWriteContract("NiftyInk");
 
-  const createInkGnosis = async (values: any) => {
-    console.log("Inking:", values);
-
-    setIsCreating(true);
-
+  const createInkGnosis = async () => {
     const imageData = drawingCanvas?.current?.canvas.drawing.toDataURL("image/png");
+    const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
+    const imageHash = await Hash.of(imageBuffer);
+    console.log("imageHash", imageHash);
 
     const saveData = drawingCanvas?.current?.getSaveData();
     if (!saveData) {
       throw new Error("Failed to get save data from canvas");
     }
     const compressedArray = LZ.compressToUint8Array(saveData);
-
     const drawingBuffer = Buffer.from(compressedArray);
-    const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
-
     const drawingHash = await Hash.of(drawingBuffer);
     console.log("drawingHash", drawingHash);
 
-    const imageHash = await Hash.of(imageBuffer);
-    console.log("imageHash", imageHash);
-
     const timeInMs = new Date();
-
     const currentInk = {
-      // ...ink,
       attributes: [
         {
           trait_type: "Limit",
-          value: values.limit.toString(),
+          value: inkNumber.toString(),
         },
       ],
-      name: values.title,
+      name: inkName,
       description: `A Nifty Ink by ${connectedAddress} on ${timeInMs}`,
       drawing: drawingHash,
       image: `https://ipfs.io/ipfs/${imageHash}`,
@@ -62,7 +52,6 @@ export const CreateInkGnosisForm = ({ connectedAddress, drawingCanvas }: CreateI
 
     const inkStr = JSON.stringify(currentInk);
     const inkBuffer = Buffer.from(inkStr);
-
     const jsonHash = await Hash.of(inkBuffer);
     console.log("jsonHash", jsonHash);
 
@@ -86,20 +75,26 @@ export const CreateInkGnosisForm = ({ connectedAddress, drawingCanvas }: CreateI
     try {
       await writeYourContractAsync({
         functionName: "createInk",
-        args: [drawingHash, jsonHash, values.limit.toString()],
+        args: [drawingHash, jsonHash, BigInt(inkNumber)],
       });
 
       router.push("/ink/" + drawingHash);
     } catch (e) {
       console.log(e);
-    } finally {
-      setIsCreating(false);
     }
   };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     console.log("Ink Number:", inkNumber);
+    try {
+      createInkGnosis();
+    } catch (e) {
+      console.log(e);
+      notification.error(`📛 Ink upload failed. Please wait a moment and try again ${(e as Error).message}`);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -129,14 +124,15 @@ export const CreateInkGnosisForm = ({ connectedAddress, drawingCanvas }: CreateI
             className="input input-sm input-bordered w-full max-w-xs"
             value={inkNumber}
             onChange={e => setInkNumber(Number(e.target.value))}
-            min="0" // check if minimum works
+            min="0"
             required
           />
         </div>
 
         <div className="form-control mt-6">
           <button className="btn btn-primary" disabled={isCreating} type="submit">
-            Ink!
+            {isCreating && <span className="loading loading-spinner loading-sm"></span>}
+            <span>Ink!</span>
           </button>
         </div>
       </form>

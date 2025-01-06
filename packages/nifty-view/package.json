@@ -24,18 +24,23 @@
     "tailwindcss": "^3.4.3"
   },
   "devDependencies": {
-    "@trivago/prettier-plugin-sort-imports": "^4.1.1",
+    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "@types/node": "^18.19.50",
     "@types/react": "^18.3.5",
-    "@types/react-canvas-draw": "^1.2.4",
+    "@types/react-canvas-draw": "^1.2.3",
+    "@types/react-copy-to-clipboard": "^5.0.4",
+    "@typescript-eslint/eslint-plugin": "^5.39.0",
+    "abitype": "1.0.6",
+    "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.15",
     "eslint-config-prettier": "^8.10.0",
     "eslint-plugin-prettier": "^5.2.1",
     "postcss": "^8.4.45",
-    "prettier": "^2.8.4",
+    "prettier": "^3.3.3",
     "tailwindcss": "^3.4.11",
+    "type-fest": "^4.26.1",
     "typescript": "<5.6.0",
-    "vercel": "latest"
+    "vercel": "^39.1.3"
   }
 }

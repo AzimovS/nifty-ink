@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createCreatorClient } from "@zoralabs/protocol-sdk";
 import LZ from "lz-string";
-import { usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { CanvasDrawLines } from "~~/types/canvasDrawing";
 import { notification } from "~~/utils/scaffold-eth";
@@ -69,6 +69,8 @@ type CreateInkZoraFormProps = {
 };
 
 export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: CreateInkZoraFormProps) => {
+  const { connector } = useAccount();
+
   const IPFS_BASE_URL = "https://azure-qualified-blackbird-912.mypinata.cloud/ipfs/";
   const VIEW_INK_URL = "https://nifty-view.vercel.app/ink/";
   const NEW_COLLECTION_VAL = "newcollection";
@@ -205,6 +207,14 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
       setFormState("fill");
     }
   };
+
+  if (connector?.name === "Burner Wallet") {
+    return (
+      <div className="flex justify-center">
+        <p>Burner Wallet is not supported for this network</p>
+      </div>
+    );
+  }
 
   return formState !== "success" ? (
     <form className="flex justify-center form-control w-full max-w-xs" onSubmit={handleSubmit}>

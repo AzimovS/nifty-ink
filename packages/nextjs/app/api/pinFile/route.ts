@@ -14,8 +14,6 @@ export async function POST(req: Request) {
     const data = new FormData();
     data.append("file", file);
 
-    console.log(data);
-
     // Send the request to Pinata
     const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
       method: "POST",

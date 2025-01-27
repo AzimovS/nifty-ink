@@ -1,4 +1,3 @@
-// pages/api/pinJsonWithPinata.ts
 import { NextResponse } from "next/server";
 
 const PINATA_JWT = process.env.PINATA_JWT;
@@ -7,11 +6,13 @@ export async function POST(req: Request) {
   try {
     const bodyText = await req.text();
     const json = JSON.parse(bodyText);
+    const url = new URL(req.url);
+    const filename = url.searchParams.get("filename") || "metadata.json";
 
     const data = JSON.stringify({
       pinataContent: json,
       pinataMetadata: {
-        name: "metadata.json",
+        name: filename,
       },
     });
 

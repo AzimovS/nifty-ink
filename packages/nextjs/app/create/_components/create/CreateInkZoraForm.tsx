@@ -90,8 +90,6 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
     if (status === "error") {
       notification.error("Failed to create the ink");
       setFormState("fill");
-    } else if (status === "success") {
-      setFormState("success");
     }
   }, [status]);
 
@@ -209,11 +207,14 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
     }
 
     const parameters = await createZoraInk(imageResult, inkMetadataUri, currentTime);
-    await writeContractAsync(parameters);
+    const hash = await writeContractAsync(parameters);
+    await publicClient.waitForTransactionReceipt({ hash });
 
     if (status === "error") {
       notification.error("Failed to create the ink");
       setFormState("fill");
+    } else {
+      setFormState("success");
     }
   };
 
@@ -318,7 +319,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
         🎉 Check your Ink on Zora{" "}
         <a
           className="link"
-          href={`https://testnet.zora.co/manage/1155/bsep:${createdContract}`}
+          href={`https://testnet.zora.co/collect/bsep:${createdContract}/1`}
           target="_blank"
           rel="noopener noreferrer"
         >

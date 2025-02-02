@@ -108,7 +108,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
             event_signatures: [
               "SetupNewContract(address indexed newContract, address indexed creator, address indexed defaultAdmin, string contractURI, string name, (uint32,uint32,address) defaultRoyaltyConfiguration)",
             ],
-            query: `select newcontract, name
+            query: `select newContract, name
                     from setupnewcontract
                     where creator = ${connectedAddress}`,
           },

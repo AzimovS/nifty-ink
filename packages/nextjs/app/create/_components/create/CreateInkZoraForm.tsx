@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createCreatorClient } from "@zoralabs/protocol-sdk";
+import { create1155, createNew1155Token } from "@zoralabs/protocol-sdk";
 import LZ from "lz-string";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
@@ -84,7 +84,6 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
   const [createdContract, setCreatedContract] = useState<string>("");
   const publicClient = usePublicClient()!;
 
-  const creatorClient = createCreatorClient({ chainId, publicClient });
   const { writeContractAsync, status } = useWriteContract();
 
   useEffect(() => {
@@ -155,7 +154,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
     return inkMetadataUri;
   };
 
-  const create1155 = async (imageResult: string, inkMetadataUri: string, currentTime: string) => {
+  const createZoraInk = async (imageResult: string, inkMetadataUri: string, currentTime: string) => {
     if (selectedContract === NEW_COLLECTION_VAL) {
       const contractMetadataJson = {
         name: collectionName,
@@ -166,7 +165,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
       const contractMetadataUri =
         (await handleJsonUpload(contractMetadataJson, `${collectionName}_${connectedAddress}_${currentTime}.json`)) ||
         "";
-      const { parameters, contractAddress } = await creatorClient.create1155({
+      const { parameters, contractAddress } = await create1155({
         contract: {
           name: collectionName,
           uri: `${IPFS_BASE_URL}${contractMetadataUri}`,
@@ -175,16 +174,18 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
           tokenMetadataURI: `${IPFS_BASE_URL}${inkMetadataUri}`,
         },
         account: connectedAddress,
+        publicClient,
       });
       setCreatedContract(contractAddress);
       return parameters;
     } else {
-      const { parameters } = await creatorClient.create1155OnExistingContract({
+      const { parameters } = await createNew1155Token({
         contractAddress: selectedContract?.split(",")[0],
         token: {
           tokenMetadataURI: `${IPFS_BASE_URL}${inkMetadataUri}`,
         },
         account: connectedAddress,
+        chainId: publicClient.chain.id,
       });
       setCreatedContract(selectedContract?.split(",")[0]);
       return parameters;
@@ -207,7 +208,7 @@ export const CreateInkZoraForm = ({ connectedAddress, drawingCanvas, chainId }: 
       return;
     }
 
-    const parameters = await create1155(imageResult, inkMetadataUri, currentTime);
+    const parameters = await createZoraInk(imageResult, inkMetadataUri, currentTime);
     await writeContractAsync(parameters);
 
     if (status === "error") {
